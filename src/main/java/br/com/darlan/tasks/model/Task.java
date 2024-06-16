@@ -61,6 +61,13 @@ public class Task {
                 .build();
     }
 
+    public Task update(Task oldTask) {
+        return Task.builderFrom(this)
+                .withId(oldTask.getId())
+                .withState(oldTask.getState())
+                .build();
+    }
+
     public static class Builder {
         private String id;
         private String title;

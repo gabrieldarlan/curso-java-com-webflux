@@ -2,22 +2,23 @@ package br.com.darlan.tasks.repositories;
 
 import br.com.darlan.tasks.model.Task;
 import org.springframework.data.domain.*;
-import org.springframework.data.mongodb.core.MongoOperations;
+import org.springframework.data.mongodb.core.ReactiveMongoOperations;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.stereotype.Repository;
+import reactor.core.publisher.Mono;
 
 @Repository
 public class TaskCustomRepository {
 
-    private final MongoOperations mongoOperations;
+    private final ReactiveMongoOperations mongoOperations;
 
-    public TaskCustomRepository(MongoOperations mongoOperations) {
+    public TaskCustomRepository(ReactiveMongoOperations mongoOperations) {
         this.mongoOperations = mongoOperations;
     }
 
-    public Page<Task> findPaginated(Task task, Integer page, Integer size) {
+    public Mono<Page<Task>> findPaginated(Task task, Integer page, Integer size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("title").ascending());
         ExampleMatcher exampleMatcher = ExampleMatcher.matching()
                 .withIgnorePaths("priority", "state");
@@ -30,6 +31,9 @@ public class TaskCustomRepository {
         if (task.getState() != null) {
             query.addCriteria(Criteria.where("state").is(task.getState()));
         }
-        return PageableExecutionUtils.getPage(mongoOperations.find(query, Task.class), pageable, () -> mongoOperations.count(query, Task.class));
+        return mongoOperations.find(query, Task.class)
+                .collectList()
+                .zipWith(mongoOperations.count(Query.query(Criteria.byExample(example)), Task.class))// zipa o conteudo com outro conteudo
+                .map(tuple -> PageableExecutionUtils.getPage(tuple.getT1(), pageable, tuple::getT2));
     }
 }

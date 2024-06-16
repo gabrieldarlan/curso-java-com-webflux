@@ -1,5 +1,6 @@
 package br.com.darlan.tasks.service;
 
+import br.com.darlan.tasks.exception.TaskNotFoundException;
 import br.com.darlan.tasks.model.Task;
 import br.com.darlan.tasks.repositories.TaskCustomRepository;
 import br.com.darlan.tasks.repositories.TaskRepository;
@@ -24,23 +25,31 @@ public class TaskService {
         return Mono.just(task)
                 .map(Task::insert)
                 .flatMap(this::save)
-//                .flatMap(it -> doError())
                 .doOnError(error -> LOGGER.error("Error during save task. Title: {}", task.getTitle(), error));
     }
 
-    public Page<Task> findPaginated(Task task, Integer pageNumber, Integer pageSize) {
+    public Mono<Page<Task>> findPaginated(Task task, Integer pageNumber, Integer pageSize) {
         return taskCustomRepository.findPaginated(task, pageNumber, pageSize);
     }
 
     private Mono<Task> save(Task task) {
         return Mono.just(task)
                 .doOnNext(t -> LOGGER.info("Saving with title {}", t.getTitle()))
-                .map(taskRepository::save);
+                .flatMap(taskRepository::save);
     }
 
     public Mono<Void> deleteById(String id) {
         //! Quando o retorno da função é void usamos o Mono.fromRunnable
-        return Mono.fromRunnable(() -> taskRepository.deleteById(id));
+//        return Mono.fromRunnable(() -> taskRepository.deleteById(id));
+        return taskRepository.deleteById(id);
 
+    }
+
+    public Mono<Task> update(Task task) {
+        return taskRepository.findById(task.getId())
+                .map(task::update)
+                .flatMap(taskRepository::save)
+                .switchIfEmpty(Mono.error(TaskNotFoundException::new))
+                .doOnError(error -> LOGGER.error("Error during update task with id: {}. Message: {}", task.getId(), error.getMessage()));
     }
 }
