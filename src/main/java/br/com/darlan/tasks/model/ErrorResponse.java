@@ -1,6 +1,7 @@
 package br.com.darlan.tasks.model;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.validation.FieldError;
 
 public class ErrorResponse {
     private int status;
@@ -42,6 +43,13 @@ public class ErrorResponse {
         return ErrorResponse.builder()
                 .withStatus(HttpStatus.INTERNAL_SERVER_ERROR.value())
                 .withMessage(exception.getMessage())
+                .build();
+    }
+
+    public static ErrorResponse invalidArgumentsError(FieldError fieldError) {
+        return ErrorResponse.builder()
+                .withStatus(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .withMessage(fieldError.getDefaultMessage())
                 .build();
     }
 

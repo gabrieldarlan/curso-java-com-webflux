@@ -8,6 +8,7 @@ import br.com.darlan.tasks.controller.dto.TaskInsertDTO;
 import br.com.darlan.tasks.controller.dto.TaskUpdateDTO;
 import br.com.darlan.tasks.model.TaskState;
 import br.com.darlan.tasks.service.TaskService;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -48,7 +49,7 @@ public class TaskController {
     }
 
     @PostMapping
-    public Mono<TaskDTO> createTask(@RequestBody TaskInsertDTO taskInsertDTO) {
+    public Mono<TaskDTO> createTask(@RequestBody @Valid TaskInsertDTO taskInsertDTO) {
         return service
                 .insert(taskInsertDTOConverter.convert(taskInsertDTO))
                 .doOnNext(task -> LOGGER.info("Saved task with id {}", task.getId()))
@@ -64,7 +65,7 @@ public class TaskController {
     }
 
     @PutMapping
-    public Mono<TaskDTO> updateTask(@RequestBody TaskUpdateDTO taskUpdateDTO) {
+    public Mono<TaskDTO> updateTask(@RequestBody @Valid TaskUpdateDTO taskUpdateDTO) {
         return service.update(taskUpdateDTOConverter.convert(taskUpdateDTO))
                 .doOnNext(it -> LOGGER.info("Update task with id {}", it.getId()))
                 .map(converter::convert);
