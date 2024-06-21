@@ -1,5 +1,6 @@
 package br.com.darlan.tasks.controller.dto;
 
+import br.com.darlan.tasks.model.Address;
 import br.com.darlan.tasks.model.TaskState;
 
 public class TaskDTO {
@@ -9,6 +10,8 @@ public class TaskDTO {
     private String description;
     private int priority;
     private TaskState state;
+
+    private Address address;
 
     public String getTitle() {
         return title;
@@ -42,6 +45,13 @@ public class TaskDTO {
         this.state = state;
     }
 
+    public Address getAddress() {
+        return address;
+    }
+
+    public void setAddress(Address address) {
+        this.address = address;
+    }
 
     public String getId() {
         return id;

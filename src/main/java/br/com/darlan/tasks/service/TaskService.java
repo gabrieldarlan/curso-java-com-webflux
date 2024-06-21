@@ -1,6 +1,8 @@
 package br.com.darlan.tasks.service;
 
 import br.com.darlan.tasks.exception.TaskNotFoundException;
+import br.com.darlan.tasks.message.TaskNotificationProducer;
+import br.com.darlan.tasks.model.Address;
 import br.com.darlan.tasks.model.Task;
 import br.com.darlan.tasks.repositories.TaskCustomRepository;
 import br.com.darlan.tasks.repositories.TaskRepository;
@@ -13,12 +15,17 @@ import reactor.core.publisher.Mono;
 @Service
 public class TaskService {
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskService.class);
-    private final TaskRepository taskRepository;
+    private final TaskRepository repository;
     private final TaskCustomRepository taskCustomRepository;
+    private final AdressService adressService;
+    private final TaskNotificationProducer producer;
 
-    public TaskService(TaskRepository taskRepository, TaskCustomRepository taskCustomRepository) {
-        this.taskRepository = taskRepository;
+
+    public TaskService(TaskRepository repository, TaskCustomRepository taskCustomRepository, AdressService adressService, TaskNotificationProducer producer) {
+        this.repository = repository;
         this.taskCustomRepository = taskCustomRepository;
+        this.adressService = adressService;
+        this.producer = producer;
     }
 
     public Mono<Task> insert(Task task) {
@@ -32,24 +39,48 @@ public class TaskService {
         return taskCustomRepository.findPaginated(task, pageNumber, pageSize);
     }
 
+    private Mono<Task> updateAddress(Task task, Address address) {
+        return Mono.just(task)
+                .map(it -> task.updateAddress(address));
+    }
+
+    public Mono<Task> start(String id, String zipcode) {
+        return repository.findById(id)
+                .zipWhen(it -> adressService.getAddress(zipcode))
+                .flatMap(it -> updateAddress(it.getT1(), it.getT2()))
+                .map(Task::start)
+                .flatMap(repository::save)
+                .flatMap(producer::sendNotification)
+                .switchIfEmpty(Mono.error(TaskNotFoundException::new))
+                .doOnError(error -> LOGGER.error("Error on start task. ID: {}", id, error));
+    }
+
     private Mono<Task> save(Task task) {
         return Mono.just(task)
                 .doOnNext(t -> LOGGER.info("Saving with title {}", t.getTitle()))
-                .flatMap(taskRepository::save);
+                .flatMap(repository::save);
     }
 
     public Mono<Void> deleteById(String id) {
         //! Quando o retorno da função é void usamos o Mono.fromRunnable
 //        return Mono.fromRunnable(() -> taskRepository.deleteById(id));
-        return taskRepository.deleteById(id);
+        return repository.deleteById(id);
 
     }
 
     public Mono<Task> update(Task task) {
-        return taskRepository.findById(task.getId())
+        return repository.findById(task.getId())
                 .map(task::update)
-                .flatMap(taskRepository::save)
+                .flatMap(repository::save)
                 .switchIfEmpty(Mono.error(TaskNotFoundException::new))
                 .doOnError(error -> LOGGER.error("Error during update task with id: {}. Message: {}", task.getId(), error.getMessage()));
+    }
+
+    public Mono<Task> done(Task task) {
+        return Mono.just(task)
+                .doOnNext(it -> LOGGER.info("Finishing task. ID: {}", task.getId()))
+                .map(Task::done)
+                .flatMap(repository::save);
+
     }
 }
