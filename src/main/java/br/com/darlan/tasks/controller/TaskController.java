@@ -13,8 +13,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
 
 
 @RestController
@@ -56,6 +60,12 @@ public class TaskController {
                 .map(converter::convert);
     }
 
+    @PostMapping("/done")
+    public Mono<List<TaskDTO>> done(@RequestBody List<String> ids) {
+        return service.doneMany(ids)
+                .map(converter::convertList);
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public Mono<Void> delete(@PathVariable String id) {
@@ -74,5 +84,12 @@ public class TaskController {
     @PostMapping("/start")
     public Mono<TaskDTO> start(@RequestParam String id, @RequestParam String zipcode) {
         return service.start(id, zipcode).map(converter::convert);
+    }
+
+    @PostMapping("/refresh/created")
+    public ResponseEntity<Flux<TaskDTO>> refreshCreated() {
+        return ResponseEntity.ok(service.refreshCreated()
+                .map(converter::convert));
+
     }
 }

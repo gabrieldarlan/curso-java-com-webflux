@@ -10,7 +10,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
 
 @Service
 public class TaskService {
@@ -82,5 +85,21 @@ public class TaskService {
                 .map(Task::done)
                 .flatMap(repository::save);
 
+    }
+
+    public Flux<Task> refreshCreated() {
+        return repository.findAll()
+                .filter(Task::createdIsEmpty)
+                .map(Task::createdNow)
+                .flatMap(repository::save);
+    }
+
+    public Mono<List<Task>> doneMany(List<String> ids) {
+        return Flux.fromIterable(ids)
+                .flatMap(repository::findById)
+                .map(Task::done)
+                .flatMap(repository::save)
+                .doOnNext(it -> LOGGER.info("Done task. ID: {}", it.getId()))
+                .collectList();
     }
 }

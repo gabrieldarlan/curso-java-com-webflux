@@ -3,6 +3,8 @@ package br.com.darlan.tasks.controller.dto;
 import br.com.darlan.tasks.model.Address;
 import br.com.darlan.tasks.model.TaskState;
 
+import java.time.LocalDate;
+
 public class TaskDTO {
 
     private String id;
@@ -10,8 +12,8 @@ public class TaskDTO {
     private String description;
     private int priority;
     private TaskState state;
-
     private Address address;
+    private LocalDate created;
 
     public String getTitle() {
         return title;
@@ -59,5 +61,13 @@ public class TaskDTO {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public LocalDate getCreated() {
+        return created;
+    }
+
+    public void setCreated(LocalDate created) {
+        this.created = created;
     }
 }
